@@ -45,7 +45,7 @@ app.post("/api/polls", async (req, res) => {
       question,
       options: formattedOptions,
       settings: settings || { allowMulti: false },
-      votedIPs: [],
+      votedIPs: [], // Kept for schema compatibility, but not used for blocking
     });
 
     await newPoll.save();
@@ -75,17 +75,11 @@ io.on("connection", (socket) => {
 
   socket.on("vote", async ({ pollId, indices }) => {
     try {
-      const ip = socket.handshake.address || socket.conn.remoteAddress;
       const poll = await Poll.findById(pollId);
 
       if (!poll) return;
 
-      if (poll.votedIPs.includes(ip)) {
-        return socket.emit(
-          "error",
-          "You have already voted from this network.",
-        );
-      }
+      // --- IP BLOCK REMOVED TO ALLOW SAME-WIFI VOTING ---
 
       if (Array.isArray(indices)) {
         indices.forEach((index) => {
@@ -97,7 +91,6 @@ io.on("connection", (socket) => {
         poll.options[indices].votes += 1;
       }
 
-      poll.votedIPs.push(ip);
       await poll.save();
 
       io.to(pollId).emit("pollUpdated", poll);

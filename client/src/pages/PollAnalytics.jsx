@@ -3,18 +3,24 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+// UPDATED: Points to your live Render backend instead of localhost
+const BACKEND_URL = "https://poll-app-1-khiw.onrender.com";
+const socket = io(BACKEND_URL);
 
 export default function PollAnalytics() {
   const { id } = useParams();
   const [poll, setPoll] = useState(null);
 
   useEffect(() => {
+    // UPDATED: Using production URL
     axios
-      .get(`http://localhost:5000/api/polls/${id}`)
-      .then((res) => setPoll(res.data));
+      .get(`${BACKEND_URL}/api/polls/${id}`)
+      .then((res) => setPoll(res.data))
+      .catch((err) => console.error("Data Fetch Error:", err));
+
     socket.emit("joinPoll", id);
     socket.on("pollUpdated", (updated) => setPoll(updated));
+
     return () => socket.off("pollUpdated");
   }, [id]);
 
@@ -23,7 +29,6 @@ export default function PollAnalytics() {
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
   const sorted = [...poll.options].sort((a, b) => b.votes - a.votes);
   const top = sorted[0];
-  const least = sorted[sorted.length - 1];
 
   return (
     <div style={styles.pageWrapper}>
@@ -66,14 +71,7 @@ export default function PollAnalytics() {
           })}
         </div>
 
-        <div style={styles.insight}>
-          <strong style={{ color: "#003366" }}>Performance Insight:</strong>
-          <p style={styles.insightText}>
-            The least engaged option is{" "}
-            <span style={{ fontWeight: "bold" }}>"{least.text}"</span> with{" "}
-            {least.votes} total interactions.
-          </p>
-        </div>
+        {/* PERFORMANCE INSIGHT SECTION REMOVED */}
 
         <button onClick={() => window.print()} style={styles.printBtn}>
           Export Report
@@ -83,6 +81,7 @@ export default function PollAnalytics() {
   );
 }
 
+// ... styles remain the same ...
 const styles = {
   pageWrapper: {
     minHeight: "100vh",
@@ -121,7 +120,6 @@ const styles = {
     fontWeight: "bold",
     letterSpacing: "1px",
   },
-
   metricsRow: { display: "flex", gap: "20px", marginBottom: "45px" },
   metricBox: {
     flex: 1,
@@ -133,14 +131,13 @@ const styles = {
   },
   mLabel: {
     fontSize: "13px",
-    color: "#475569", // Darker Slate
+    color: "#475569",
     fontWeight: "800",
     textTransform: "uppercase",
     margin: "0 0 10px 0",
     letterSpacing: "0.5px",
   },
   mVal: { fontSize: "32px", fontWeight: "900", color: "#001E3C", margin: 0 },
-
   sectionHeader: {
     fontSize: "14px",
     color: "#003366",
@@ -156,9 +153,8 @@ const styles = {
     justifyContent: "space-between",
     marginBottom: "10px",
   },
-  optionName: { fontWeight: "700", color: "#1E293B", fontSize: "16px" }, // Darker Text
+  optionName: { fontWeight: "700", color: "#1E293B", fontSize: "16px" },
   optionPct: { fontWeight: "800", color: "#00ABE4", fontSize: "16px" },
-
   track: {
     height: "12px",
     background: "#E9F1FA",
@@ -177,18 +173,6 @@ const styles = {
     marginTop: "6px",
     fontWeight: "600",
   },
-
-  insight: {
-    marginTop: "40px",
-    padding: "20px",
-    borderRadius: "12px",
-    borderLeft: "6px solid #003366",
-    background: "#F8FAFC",
-    fontSize: "15px",
-    textAlign: "left",
-  },
-  insightText: { color: "#1E293B", margin: "8px 0 0 0", lineHeight: "1.5" },
-
   printBtn: {
     marginTop: "30px",
     background: "none",
@@ -200,7 +184,6 @@ const styles = {
     fontWeight: "700",
     transition: "0.3s",
   },
-
   loader: {
     color: "#003366",
     textAlign: "center",

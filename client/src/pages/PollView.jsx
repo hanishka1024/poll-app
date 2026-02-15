@@ -3,7 +3,9 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+// Using your live Render URL
+const API_BASE_URL = "https://poll-app-1-khiw.onrender.com";
+const socket = io(API_BASE_URL);
 
 export default function PollView() {
   const { id } = useParams();
@@ -13,7 +15,7 @@ export default function PollView() {
   const [copyStatus, setCopyStatus] = useState("Share Poll Link");
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/polls/${id}`).then((res) => {
+    axios.get(`${API_BASE_URL}/api/polls/${id}`).then((res) => {
       setPoll(res.data);
       if (localStorage.getItem(`voted_${id}`)) setHasVoted(true);
     });
@@ -33,34 +35,15 @@ export default function PollView() {
     };
   }, [id]);
 
-  // --- IMPROVED TOGGLE LOGIC ---
   const toggleSelection = (index) => {
     if (hasVoted) return;
-
-    setSelectedIndices((currentSelected) => {
-      // 1. Force check: Default to false if settings or allowMulti is missing
-      const canMultiSelect = poll?.settings?.allowMulti === true;
-
-      if (canMultiSelect) {
-        // Multi-select behavior
-        if (currentSelected.includes(index)) {
-          return currentSelected.filter((i) => i !== index);
-        } else {
-          return [...currentSelected, index];
-        }
-      } else {
-        // Single-select behavior
-        return [index];
-      }
-    });
+    // Single-select behavior is now forced here
+    setSelectedIndices([index]);
   };
 
   const handleVoteSubmit = () => {
     if (selectedIndices.length === 0) return alert("Please select an option.");
-
-    // Send indices to backend
     socket.emit("vote", { pollId: id, indices: selectedIndices });
-
     setHasVoted(true);
     localStorage.setItem(`voted_${id}`, "true");
   };
@@ -71,7 +54,8 @@ export default function PollView() {
     setTimeout(() => setCopyStatus("Share Poll Link"), 2000);
   };
 
-  if (!poll) return <div style={styles.loader}>Syncing...</div>;
+  if (!poll)
+    return <div style={styles.loader}>Syncing with live server...</div>;
 
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
 
@@ -86,9 +70,7 @@ export default function PollView() {
         <h1 style={styles.question}>{poll.question}</h1>
 
         {hasVoted && (
-          <div style={styles.successBanner}>
-            ✓ Your vote has been recorded successfully!
-          </div>
+          <div style={styles.successBanner}>✓ Your vote has been recorded!</div>
         )}
 
         <div style={styles.optionsList}>
@@ -100,8 +82,8 @@ export default function PollView() {
             return (
               <div
                 key={i}
+                onClick={() => toggleSelection(i)}
                 style={{
-                  ...styles.optionItem,
                   border:
                     isSelected && !hasVoted
                       ? "2px solid #00ABE4"
@@ -112,7 +94,6 @@ export default function PollView() {
                   borderRadius: "12px",
                   marginBottom: "10px",
                 }}
-                onClick={() => toggleSelection(i)}
               >
                 <div
                   style={{
@@ -120,11 +101,11 @@ export default function PollView() {
                     color: isSelected && !hasVoted ? "#00ABE4" : "#334155",
                   }}
                 >
-                  <span style={styles.optText}>
+                  <span>
                     {!hasVoted && (isSelected ? "✅ " : "⬜ ")}
                     {opt.text}
                   </span>
-                  {hasVoted && <span style={styles.optPct}>{pct}%</span>}
+                  {hasVoted && <span>{pct}%</span>}
                 </div>
                 {hasVoted && (
                   <div style={styles.track}>
@@ -138,8 +119,7 @@ export default function PollView() {
 
         {!hasVoted && (
           <button onClick={handleVoteSubmit} style={styles.submitBtn}>
-            Submit Vote{" "}
-            {selectedIndices.length > 0 ? `(${selectedIndices.length})` : ""}
+            Submit Vote
           </button>
         )}
 

@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+// Using your live Render URL
+const API_BASE_URL = "https://poll-app-1-khiw.onrender.com";
+
 export default function CreatePoll() {
   const [question, setQuestion] = useState("");
-  const [options, setOptions] = useState(["", ""]); // Default to 2 options
+  const [options, setOptions] = useState(["", ""]);
   const [createdLinks, setCreatedLinks] = useState(null);
   const [copyStatus, setCopyStatus] = useState("Share Poll Link 🔗");
 
@@ -14,10 +17,9 @@ export default function CreatePoll() {
     if (!question.trim() || validOptions.length < 2)
       return alert("Please provide a question and at least 2 options.");
     try {
-      const res = await axios.post("http://localhost:5000/api/polls", {
+      const res = await axios.post(`${API_BASE_URL}/api/polls`, {
         question,
         options: validOptions,
-        // Removed multi-select setting here
       });
 
       setCreatedLinks({
@@ -25,7 +27,7 @@ export default function CreatePoll() {
         analytics: `${window.location.origin}/poll/${res.data._id}/analytics`,
       });
     } catch (err) {
-      alert("System Error: Could not connect to the server.");
+      alert("System Error: Could not connect to the live server.");
     }
   };
 
@@ -46,12 +48,10 @@ export default function CreatePoll() {
               Your real-time poll is live and ready for voters.
             </p>
           </div>
-
           <div style={styles.linkGroup}>
             <label style={styles.label}>Public Voting Link</label>
             <div style={styles.urlDisplay}>{createdLinks.vote}</div>
           </div>
-
           <div style={styles.buttonStack}>
             <button onClick={copyToClipboard} style={styles.btnPrimary}>
               {copyStatus}
@@ -85,7 +85,6 @@ export default function CreatePoll() {
         <p style={styles.subtitle}>
           Configure your questions and options below.
         </p>
-
         <div style={{ textAlign: "left", marginBottom: "15px" }}>
           <label style={styles.label}>Poll Question</label>
           <input
@@ -95,7 +94,6 @@ export default function CreatePoll() {
             onChange={(e) => setQuestion(e.target.value)}
           />
         </div>
-
         <div style={{ textAlign: "left" }}>
           <label style={styles.label}>Options</label>
           {options.map((opt, i) => (
@@ -112,7 +110,6 @@ export default function CreatePoll() {
             />
           ))}
         </div>
-
         <div style={styles.actions}>
           <button onClick={addOption} style={styles.btnSecondary}>
             + Add Option

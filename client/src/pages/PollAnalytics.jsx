@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import io from "socket.io-client";
 
-// UPDATED: Points to your live Render backend instead of localhost
+// UPDATED: Points to your live Render backend
 const BACKEND_URL = "https://poll-app-1-khiw.onrender.com";
 const socket = io(BACKEND_URL);
 
@@ -12,12 +12,13 @@ export default function PollAnalytics() {
   const [poll, setPoll] = useState(null);
 
   useEffect(() => {
-    // UPDATED: Using production URL
+    // Fetch initial data
     axios
       .get(`${BACKEND_URL}/api/polls/${id}`)
       .then((res) => setPoll(res.data))
       .catch((err) => console.error("Data Fetch Error:", err));
 
+    // Listen for real-time updates
     socket.emit("joinPoll", id);
     socket.on("pollUpdated", (updated) => setPoll(updated));
 
@@ -26,9 +27,20 @@ export default function PollAnalytics() {
 
   if (!poll) return <div style={styles.loader}>Synchronizing Data...</div>;
 
+  // --- ANALYTICS LOGIC ---
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
-  const sorted = [...poll.options].sort((a, b) => b.votes - a.votes);
-  const top = sorted[0];
+
+  // Find the highest number of votes currently cast
+  const maxVotes = Math.max(...poll.options.map((o) => o.votes));
+
+  // Get ALL options that share that maximum number of votes (only if votes > 0)
+  const leaders = poll.options.filter(
+    (o) => o.votes === maxVotes && maxVotes > 0,
+  );
+
+  // Format the display string (e.g., "Maths & Physics")
+  const leaderText =
+    leaders.length > 0 ? leaders.map((l) => l.text).join(" & ") : "Pending...";
 
   return (
     <div style={styles.pageWrapper}>
@@ -45,8 +57,15 @@ export default function PollAnalytics() {
           </div>
           <div style={styles.metricBox}>
             <p style={styles.mLabel}>Current Leader</p>
-            <p style={{ ...styles.mVal, color: "#00ABE4" }}>
-              {top.votes > 0 ? top.text : "Pending..."}
+            {/* Dynamic font size based on length of leader names */}
+            <p
+              style={{
+                ...styles.mVal,
+                color: "#00ABE4",
+                fontSize: leaderText.length > 15 ? "20px" : "32px",
+              }}
+            >
+              {leaderText}
             </p>
           </div>
         </div>
@@ -71,8 +90,6 @@ export default function PollAnalytics() {
           })}
         </div>
 
-        {/* PERFORMANCE INSIGHT SECTION REMOVED */}
-
         <button onClick={() => window.print()} style={styles.printBtn}>
           Export Report
         </button>
@@ -81,7 +98,6 @@ export default function PollAnalytics() {
   );
 }
 
-// ... styles remain the same ...
 const styles = {
   pageWrapper: {
     minHeight: "100vh",
@@ -137,7 +153,13 @@ const styles = {
     margin: "0 0 10px 0",
     letterSpacing: "0.5px",
   },
-  mVal: { fontSize: "32px", fontWeight: "900", color: "#001E3C", margin: 0 },
+  mVal: {
+    fontSize: "32px",
+    fontWeight: "900",
+    color: "#001E3C",
+    margin: 0,
+    wordBreak: "break-word",
+  },
   sectionHeader: {
     fontSize: "14px",
     color: "#003366",
